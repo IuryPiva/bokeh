@@ -378,6 +378,20 @@ describe("Bug", () => {
 
       await display(row([p0, p1]))
     })
+
+    it("disallows to render multi-lines with NaNs using SVG backend", async () => {
+      function make_plot(output_backend: OutputBackend) {
+        const p = fig([300, 200], {output_backend})
+        const y = [NaN, 0, 1, 4, NaN, NaN, NaN, 3, 4, NaN, NaN, 5, 6, 9, 10]
+        p.multi_line({xs: [range(y.length)], ys: [y]})
+        return p
+      }
+
+      const p0 = make_plot("canvas")
+      const p1 = make_plot("svg")
+
+      await display(row([p0, p1]))
+    })
   })
 
   describe("in issue #10725", () => {
@@ -810,6 +824,26 @@ describe("Bug", () => {
       const {view} = await display(p)
 
       p.circle(0, 0, {radius: 1})
+      await view.ready
+    })
+  })
+
+  describe("in issue #11045", () => {
+    it("prevents correct paint of glyphs using hatch patters in SVG backend after pan", async () => {
+      const p = fig([200, 200], {x_range: [-1, 1], y_range: [-1, 1], output_backend: "svg"})
+      p.circle({x: 0, y: 0, radius: 1, fill_color: "orange", alpha: 0.6, hatch_pattern: "@"})
+      const {view} = await display(p)
+
+      const {start: x_start, end: x_end} = p.x_range
+      const {start: y_start, end: y_end} = p.y_range
+      const pan = 0.5
+
+      const xrs = new Map([["default", {start: x_start + pan, end: x_end + pan}]])
+      const yrs = new Map([["default", {start: y_start + pan, end: y_end + pan}]])
+      view.update_range({xrs, yrs}, {panning: true})
+
+      // TODO: p.pan(0.5, 0.5)
+
       await view.ready
     })
   })
